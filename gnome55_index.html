@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OOM's GNOME 45 Desktop 🐧</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cantarell', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            color: #fff;
+            user-select: none;
+        }
+
+        /* Glass Desktop Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.3) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(255, 182, 193, 0.4) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(173, 216, 230, 0.3) 0%, transparent 50%);
+            animation: glassFloat 12s ease-in-out infinite alternate;
+            z-index: -1;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes glassFloat {
+            0% { opacity: 0.8; transform: scale(1); }
+            100% { opacity: 1; transform: scale(1.05); }
+        }
+
+        /* Floating particles */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: floatParticle 15s infinite ease-in-out;
+        }
+
+        @keyframes floatParticle {
+            0%, 100% { 
+                transform: translateY(100vh) rotate(0deg); 
+                opacity: 0;
+            }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { 
+                transform: translateY(-100vh) rotate(720deg); 
+                opacity: 0;
+            }
+        }
+
+        /* Glowing effect for active windows */
+        @keyframes windowGlow {
+            0%, 100% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+            50% { box-shadow: 0 8px 40px rgba(100, 126, 234, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 0 60px rgba(102, 126, 234, 0.1); }
+        }
+
+        /* Pulse animation for dock icons */
+        @keyframes iconPulse {
+            0%, 100% { transform: scale(1.15) translateY(-5px); }
+            50% { transform: scale(1.18) translateY(-7px); }
+        }
+
+        .dash-icon:hover {
+            animation: iconPulse 0.6s ease-in-out;
+        }
+
+        /* Ripple effect */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0);
+            animation: rippleEffect 0.6s ease-out;
+            pointer-events: none;
+        }
+
+        @keyframes rippleEffect {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Glass Top Bar */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 2000;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .activities {
+            font-size: 15px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .activities:hover {
+            background: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .top-bar-right {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .app-menu {
+            position: absolute;
+            top: 48px;
+            left: 0;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border-radius: 16px;
+            min-width: 240px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            z-index: 2001;
+            max-height: 320px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+
+        .app-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .app-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: background 0.2s;
+            font-size: 14px;
+        }
+
+        .app-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Glass Dock */
+        .dash {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border-radius: 20px;
+            padding: 14px 20px;
+            display: flex;
+            gap: 14px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+
+        .dash-icon {
+            width: 64px;
+            height: 64px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-size: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .dash-icon:hover {
+            transform: scale(1.15) translateY(-5px);
+            background: rgba(255, 255, 255, 0.35);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .dash-icon.active {
+            background: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.4);
+        }
+
+        /* Glass Windows */
+        .window {
+            position: fixed;
+            top: 64px;
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border-radius: 20px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.15),
+                0 0 0 1px rgba(255, 255, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            min-width: 360px;
+            max-width: 600px;
+            max-height: 70vh;
+            z-index: 1000;
+            animation: glassSlideIn 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            resize: both;
+            min-height: 340px;
+        }
+
+        @keyframes glassSlideIn {
+            from { opacity: 0; transform: translateY(32px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .title-bar {
+            height: 48px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            cursor: move;
+            user-select: none;
+            border-radius: 20px 20px 0 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .control-btn {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .close-gnome { background: #e01b26; }
+        .minimize-gnome { background: #f5b041; }
+        .maximize-gnome { background: #2fbe49; }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 12px currentColor;
+        }
+
+        .window-title-gnome {
+            flex: 1;
+            margin-left: 16px;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #fff;
+        }
+
+        .window-content {
+            padding: 28px;
+            height: calc(100% - 48px);
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        /* Custom scrollbar */
+        .window-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .window-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .window-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        .window-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .hero-content { text-align: center; }
+        .hero-name {
+            font-size: 2.6rem;
+            background: linear-gradient(45deg, #1d99f3, #0d7ae5, #4facfe);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .greeting {
+            font-size: 1.6rem;
+            color: #4facfe;
+            margin-top: 20px;
+            text-shadow: 0 0 12px rgba(79, 172, 254, 0.4);
+        }
+
+        .info-list {
+            list-style: none;
+        }
+
+        .info-list li {
+            padding: 16px 20px;
+            margin: 12px 0;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-list li:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        @media (max-width: 768px) {
+            .dash { 
+                bottom: 16px; 
+                left: 16px; 
+                right: 16px; 
+                padding: 10px; 
+                flex-wrap: wrap; 
+                gap: 10px; 
+            }
+            .dash-icon { width: 56px; height: 56px; }
+            .top-bar { font-size: 13px; padding: 0 12px; }
+        }
+
+        .dash-icon::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 8px;
+            height: 8px;
+            background: #4facfe;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .dash-icon.running::after { opacity: 1; }
+    </style>
+</head>
+<body>
+    <!-- Floating Particles -->
+    <div class="particles" id="particles"></div>
+
+    <div class="top-bar">
+        <div class="activities" id="activities">Activities</div>
+        <div style="flex: 1;"></div>
+        <div class="top-bar-right">
+            <div class="status-icon" title="Network">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+            </div>
+            <div class="status-icon" title="Volume">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            </div>
+            <div class="status-icon" id="appSwitcher" title="Apps">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/><circle cx="5" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="5" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="19" r="1"/><circle cx="19" cy="19" r="1"/></svg>
+            </div>
+            <div class="status-icon" title="Battery">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="6" width="18" height="12" rx="2" ry="2"/><line x1="23" y1="13" x2="23" y2="11"/><rect x="3" y="8" width="12" height="8" fill="currentColor" opacity="0.5"/></svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="dash" id="dash">
+        <div class="dash-icon" data-window="firefox" title="Firefox">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12a4 4 0 0 1 8 0"/><path d="M12 8v4l2 2"/></svg>
+        </div>
+        <div class="dash-icon" data-window="terminal" title="Terminal">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        </div>
+        <div class="dash-icon" data-window="profile" title="Profile">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+        </div>
+        <div class="dash-icon" data-window="birthday" title="Birthday">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m-2-2h4"/><rect x="4" y="8" width="16" height="14" rx="2"/><path d="M8 12h8"/></svg>
+        </div>
+        <div class="dash-icon" data-window="likes" title="Likes">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <div class="dash-icon" data-window="dislikes" title="Dislike">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h0a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><line x1="12" y1="8" x2="12" y2="4"/></svg>
+        </div>
+        <div class="dash-icon" data-window="languages" title="Languages">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        <div class="dash-icon" data-window="games" title="Games">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="17" cy="10" r="1"/><circle cx="15" cy="12" r="1"/></svg>
+        </div>
+        <div class="dash-icon" data-window="animals" title="Animals">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><circle cx="7" cy="6" r="2"/><circle cx="17" cy="6" r="2"/><path d="M12 13c-4 0-7 3-7 6v1h14v-1c0-3-3-6-7-6z"/></svg>
+        </div>
+    </div>
+
+    <div class="app-menu" id="appMenu"></div>
+
+    <script>
+        let windowsData = {};
+        let userData = null;
+
+        async function loadUserData() {
+            try {
+                const response = await fetch('data.json');
+                userData = await response.json();
+                buildWindowsData();
+            } catch (e) {
+                console.log('Failed to load data.json, using defaults');
+                buildWindowsData(true);
+            }
+        }
+
+        function buildWindowsData(useDefaults = false) {
+            const data = useDefaults ? {
+                name: 'OOM or OM',
+                pronouns: 'He/Him',
+                birthday: 'Nahh',
+                likes: ['Reading', 'Watching Vtuber', 'Sleeping', 'Listening to music', 'Code!'],
+                dislike: 'Nahh (ask me 😌)',
+                languages: { thai: 'Native Proficiency (maybe)', english: 'Intermediate Proficiency (B2)', note: 'B2 is in actual use ≠ B2 Examination trust me...' },
+                games: 'Minecraft......',
+                animals: 'Fox and other cute animals!',
+                greeting: 'Nice to meet everyone!'
+            } : userData;
+
+            windowsData.profile = {
+                title: 'About ' + data.name.split(' ')[0],
+                content: `<div class="hero-content">
+                    <div class="hero-name">${data.name}</div>
+                    <div style="font-size: 1.4rem; color: rgba(255,255,255,0.9); margin-bottom: 20px;">🍜 ${data.pronouns}</div>
+                    <div class="greeting">🎋 ${data.greeting}</div>
+                </div>`
+            };
+            windowsData.firefox = {
+                title: 'Firefox 🦊',
+                content: `<div style="padding: 40px; text-align: center;">
+                    <h2 style="color: #e66000; font-size: 2rem; margin-bottom: 20px;">🦊 Firefox</h2>
+                    <iframe src="https://archive.org/details/Rick_Astley_Never_Gonna_Give_You_Up"
+                            width="100%" height="300" frameborder="0" allowfullscreen style="border-radius: 12px;"></iframe>
+                    <p style="margin-top: 20px; opacity: 0.8;">\🎵~~~>
+                </div>`
+            };
+            windowsData.terminal = {
+                title: 'Terminal',
+                content: `<div id="terminal-container" style="font-family: 'Monaco', 'Ubuntu Mono', 'Consolas', monospace; background: #1e1e2e; color: #cdd6f4; padding: 16px; border-radius: 12px; height: 380px; overflow-y: auto; position: relative;">
+                    <div style="position: absolute; top: 8px; right: 12px; display: flex; gap: 6px;">
+                        <div style="width: 12px; height: 12px; background: #f38ba8; border-radius: 50%;"></div>
+                        <div style="width: 12px; height: 12px; background: #fab387; border-radius: 50%;"></div>
+                        <div style="width: 12px; height: 12px; background: #a6e3a1; border-radius: 50%;"></div>
+                    </div>
+                    <div id="terminal-output" style="font-size: 13px; line-height: 1.5; white-space: pre-wrap; margin-top: 8px;"></div>
+                    <div style="display: flex; align-items: center; margin-top: 8px;">
+                        <span style="color: #89b4fa;">[oom@linux ~]$ </span>
+                        <input type="text" id="terminal-input" style="background: transparent; border: none; color: #cdd6f4; font-family: inherit; font-size: 13px; width: 100%; outline: none; caret-color: #f5c2e7;" autocomplete="off" spellcheck="false">
+                    </div>
+                </div>`
+            };
+            windowsData.birthday = {
+                title: '🕊️ Birthday',
+                content: `<p style="font-size: 1.4rem; color: rgba(255,255,255,0.9);">${data.birthday}</p>`
+            };
+            windowsData.likes = {
+                title: '🐇 Likes',
+                content: `<ul class="info-list">${data.likes.map(item => `<li>📚 ${item}</li>`).join('')}</ul>`
+            };
+            windowsData.dislikes = {
+                title: '🥐 Dislike',
+                content: `<p style="font-size: 1.4rem; color: rgba(255,255,255,0.9);">${data.dislike}</p>`
+            };
+            windowsData.languages = {
+                title: '🧁 Languages',
+                content: `<ul class="info-list">
+                    <li><span style="font-size: 1.3rem; margin-right: 12px;">🇹🇭 Thai</span><strong>${data.languages.thai}</strong></li>
+                    <li><span style="font-size: 1.3rem; margin-right: 12px;">🇺🇸 English</span><strong>${data.languages.english}</strong></li>
+                    <li style="text-align: center;">😌 ${data.languages.note}</li>
+                </ul>`
+            };
+            windowsData.games = {
+                title: '🍡 Games',
+                content: `<p style="font-size: 1.4rem; color: rgba(255,255,255,0.9);">${data.games}</p>`
+            };
+            windowsData.animals = {
+                title: '☕️ Favorite animals',
+                content: `<p style="font-size: 1.4rem; color: rgba(255,255,255,0.9);">${data.animals}</p>`
+            };
+        }
+
+        let windowManager = [];
+
+        class GnomeWindow {
+            constructor(id) {
+                this.id = id;
+                this.element = null;
+                this.create();
+            }
+
+            create() {
+                this.element = document.createElement('div');
+                this.element.className = 'window';
+                this.element.style.display = 'none';
+                this.element.style.left = '60px';
+                this.element.style.top = '80px';
+                this.element.style.zIndex = 1001;
+
+                const titleBar = document.createElement('div');
+                titleBar.className = 'title-bar';
+
+                const controls = document.createElement('div');
+                controls.className = 'window-controls';
+                controls.innerHTML = `
+                    <div class="control-btn close-gnome" title="Close"></div>
+                    <div class="control-btn minimize-gnome" title="Minimize"></div>
+                    <div class="control-btn maximize-gnome" title="Maximize"></div>
+                `;
+
+                const title = document.createElement('div');
+                title.className = 'window-title-gnome';
+                title.textContent = windowsData[this.id].title;
+
+                titleBar.appendChild(controls);
+                titleBar.appendChild(title);
+
+                const content = document.createElement('div');
+                content.className = 'window-content';
+                content.innerHTML = windowsData[this.id].content;
+
+                this.element.appendChild(titleBar);
+                this.element.appendChild(content);
+
+                document.body.appendChild(this.element);
+                this.bindEvents();
+            }
+
+            bindEvents() {
+                // Drag
+                let isDragging = false;
+                let xOffset = 0;
+                let yOffset = 0;
+
+                const titleBar = this.element.querySelector('.title-bar');
+                titleBar.addEventListener('mousedown', (e) => {
+                    if (e.target.closest('.control-btn')) return;
+                    isDragging = true;
+                    xOffset = e.clientX - parseInt(this.element.style.left || 0);
+                    yOffset = e.clientY - parseInt(this.element.style.top || 0);
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (isDragging) {
+                        this.element.style.left = (e.clientX - xOffset) + 'px';
+                        this.element.style.top = (e.clientY - yOffset) + 'px';
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
+
+                // Controls
+                this.element.querySelector('.close-gnome').onclick = () => this.close();
+                this.element.querySelector('.minimize-gnome').onclick = () => this.minimize();
+                this.element.querySelector('.maximize-gnome').onclick = () => this.toggleMaximize();
+            }
+
+            show() {
+                this.element.style.display = 'block';
+                this.bringToFront();
+            }
+
+            minimize() {
+                this.element.style.display = 'none';
+                document.querySelector(`[data-window="${this.id}"]`).classList.add('active');
+            }
+
+            toggleMaximize() {
+                if (this.element.style.width === '90vw') {
+                    this.element.style.width = '';
+                    this.element.style.height = '';
+                    this.element.style.left = '60px';
+                    this.element.style.top = '80px';
+                } else {
+                    this.element.style.left = '5vw';
+                    this.element.style.top = '10vh';
+                    this.element.style.width = '90vw';
+                    this.element.style.height = '80vh';
+                    this.element.style.maxWidth = 'none';
+                    this.element.style.maxHeight = 'none';
+                }
+                this.bringToFront();
+            }
+
+            close() {
+                this.element.remove();
+                const index = windowManager.indexOf(this);
+                if (index > -1) windowManager.splice(index, 1);
+                document.querySelector(`[data-window="${this.id}"]`).classList.remove('active');
+            }
+
+            bringToFront() {
+                let maxZ = 1000;
+                document.querySelectorAll('.window').forEach(win => {
+                    const z = parseInt(win.style.zIndex) || 1000;
+                    if (z > maxZ) maxZ = z;
+                });
+                this.element.style.zIndex = maxZ + 1;
+            }
+        }
+
+        // Create floating particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            const particleCount = 20;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.width = (Math.random() * 15 + 5) + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.animationDelay = Math.random() * 15 + 's';
+                particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+                particle.style.opacity = Math.random() * 0.5 + 0.1;
+                container.appendChild(particle);
+            }
+        }
+
+        // Ripple effect on click
+        function createRipple(e, element) {
+            const ripple = document.createElement('span');
+            ripple.className = 'ripple';
+            const rect = element.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = e.clientX - rect.left - size / 2 + 'px';
+            ripple.style.top = e.clientY - rect.top - size / 2 + 'px';
+            element.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        }
+
+        // Terminal commands
+        const terminalCommands = {
+            help: () => `Available commands:
+  help     - Show this help
+  clear    - Clear terminal
+  echo     - Echo text
+  date     - Show current date/time
+  whoami   - Show current user
+  pwd      - Show current directory
+  ls       - List files
+  cat      - Read file
+  neofetch - Show system info
+  uname    - System information
+  uptime   - Show uptime
+  cowsay   - Cow says something`,
+            clear: () => '__CLEAR__',
+            echo: (args) => args.join(' '),
+            date: () => new Date().toString(),
+            whoami: () => 'oom',
+            pwd: () => '/home/oom',
+            ls: () => 'Desktop  Documents  Downloads  Music  Pictures  Videos  .bashrc  .bash_profile  .config',
+            cat: (args) => {
+                if (args[0] === '.bashrc') return '# ~/.bashrc\nexport PATH=$PATH:~/bin\nalias ll="ls -la"\nalias cls="clear"';
+                if (args[0] === '.bash_profile') return '# ~/.bash_profile\nif [ -f ~/.bashrc ]; then\n    source ~/.bashrc\nfi';
+                return `cat: ${args[0] || 'no file specified'}: No such file or directory`;
+            },
+            neofetch: () => `
+<span style="color: #89b4fa;">        .-/+oossssoo+/-.        </span><span style="color: #cdd6f4;">oom@linux</span>
+<span style="color: #89b4fa;">    \`:+ssssssssssssssssss+:\`    </span><span style="color: #cdd6f4;">-----------</span>
+<span style="color: #89b4fa;">  -+ssssssssssssssssssyyssss+-  </span><span style="color: #f9e2af;">OS:</span> Linux Mint 22 Vanessa x86_64
+<span style="color: #89b4fa;">.ossssssssssssssssss</span><span style="color: #f5c2e7;">dMMMNy</span><span style="color: #89b4fa;">sssso+. </span><span style="color: #f9e2af;">Host:</span> KVM
+<span style="color: #89b4fa;">/sssssssssss</span><span style="color: #f5c2e7;">hdmmNNmmyNMMMM</span><span style="color: #89b4fa;">hssss+  </span><span style="color: #f9e2af;">Kernel:</span> 6.8.0-57-generic
+<span style="color: #89b4fa;">+sssssssss</span><span style="color: #f5c2e7;">hm</span><span style="color: #89b4fa;">yd</span><span style="color: #f5c2e7;">NMMMNh</span><span style="color: #89b4fa;">ssssssssss+ </span><span style="color: #f9e2af;">Uptime:</span> 20 days, 14 hrs, 23 mins
+<span style="color: #89b4fa;">/ssssssss</span><span style="color: #f5c2e7;">hNMMM</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMNm</span><span style="color: #89b4fa;">yhssssssssssss/ </span><span style="color: #f9e2af;">Packages:</span> 2898 (dpkg)
+<span style="color: #89b4fa;">.ssssssss</span><span style="color: #f5c2e7;">hNMMMM</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMMdm</span><span style="color: #89b4fa;">Nhssssssssssss. </span><span style="color: #f9e2af;">Shell:</span> bash 5.2.21
+<span style="color: #89b4fa;">/ssssss</span><span style="color: #f5c2e7;">hNMMMMM</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMMmm</span><span style="color: #89b4fa;">hssssssssssssss/ </span><span style="color: #f9e2af;">Resolution:</span> 1920x1080
+<span style="color: #89b4fa;">ssssss</span><span style="color: #f5c2e7;">hNMMMMMMN</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMMmh</span><span style="color: #89b4fa;">ssssssssssssss. </span><span style="color: #f9e2af;">DE:</span> GNOME 45
+<span style="color: #89b4fa;">.sssss</span><span style="color: #f5c2e7;">hNMMMMMMMM</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMMmh</span><span style="color: #89b4fa;">sssssssssssssss. </span><span style="color: #f9e2af;">Theme:</span> Adwaita-dark [GTK3]
+<span style="color: #89b4fa;">/sssss</span><span style="color: #f5c2e7;">hNMMMMMMMMMd</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMmh</span><span style="color: #89b4fa;">ssssssssssssssss/ </span><span style="color: #f9e2af;">Icons:</span> Adwaita [GTK3]
+<span style="color: #89b4fa;">+ssss</span><span style="color: #f5c2e7;">hNMMMMMMMMMMmy</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">mmNh</span><span style="color: #89b4fa;">ssssssssssssssss+ </span><span style="color: #f9e2af;">Terminal:</span> gnome-terminal
+<span style="color: #89b4fa;">/ssss</span><span style="color: #f5c2e7;">hNMMMMMMMMMMMM</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">mmmy</span><span style="color: #89b4fa;">ssssssssssssssssss/ </span><span style="color: #f9e2af;">CPU:</span> AMD EPYC 9334 32-Core @ 3.7 GHz
+<span style="color: #89b4fa;">/sss</span><span style="color: #f5c2e7;">hNMMMMMMMMMMMMM</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMh</span><span style="color: #89b4fa;">sssssssssssssssssss+ </span><span style="color: #f9e2af;">GPU:</span> NVIDIA RTX A6000
+<span style="color: #89b4fa;">/s</span><span style="color: #f5c2e7;">hNMMMMMMMMMMMMM</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMmh</span><span style="color: #89b4fa;">sssssssssssssssssss. </span><span style="color: #f9e2af;">Memory:</span> 4946MiB / 262144MiB`,
+            uname: () => 'Linux linux 6.8.0-57-generic x86_64 GNU/Linux',
+            uptime: () => '20:14:23 up 20 days, 14:23, 1 user, load average: 0.42, 0.35, 0.28',
+            cowsay: (args) => {
+                const msg = args.join(' ') || 'Moo!';
+                const line = '-'.repeat(msg.length + 2);
+                return ` ${line}
+< ${msg} >
+ ${line}
+        \\   ^__^
+         \\  (oo)\\_______
+            (__)\\       )\\/\\
+                ||----w |
+                ||     ||`;
+            }
+        };
+
+        // Terminal history
+        let terminalHistory = [];
+        let historyIndex = -1;
+
+        function initTerminal() {
+            const output = document.getElementById('terminal-output');
+            const input = document.getElementById('terminal-input');
+            if (!output || !input) return;
+
+            // Initial welcome message
+            output.innerHTML = `<span style="color: #a6e3a1;">Welcome to GNOME Terminal!</span>
+Type 'help' for available commands.
+
+`;
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const cmd = input.value.trim();
+                    if (cmd) {
+                        terminalHistory.push(cmd);
+                        historyIndex = terminalHistory.length;
+                        
+                        // Process command
+                        const parts = cmd.split(' ');
+                        const command = parts[0].toLowerCase();
+                        const args = parts.slice(1);
+
+                        let result = '';
+                        if (command === 'clear') {
+                            output.innerHTML = '';
+                            input.value = '';
+                            return;
+                        } else if (terminalCommands[command]) {
+                            result = terminalCommands[command](args);
+                        } else {
+                            result = `<span style="color: #f38ba8;">Command not found: ${command}</span>
+Type 'help' for available commands.`;
+                        }
+
+                        // Add to output
+                        output.innerHTML += `<span style="color: #89b4fa;">[oom@linux ~]$ </span><span style="color: #f5c2e7;">${cmd}</span>\n${result}\n\n`;
+                        input.value = '';
+                        output.scrollTop = output.scrollHeight;
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (historyIndex > 0) {
+                        historyIndex--;
+                        input.value = terminalHistory[historyIndex];
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (historyIndex < terminalHistory.length - 1) {
+                        historyIndex++;
+                        input.value = terminalHistory[historyIndex];
+                    } else {
+                        historyIndex = terminalHistory.length;
+                        input.value = '';
+                    }
+                }
+            });
+        }
+
+        async function init() {
+            // Create particles
+            createParticles();
+
+            // Load user data from data.json
+            await loadUserData();
+
+            // Initialize terminal after windows are created
+            setTimeout(initTerminal, 100);
+
+            // Clock
+            function updateClock() {
+                document.getElementById('statusClock').textContent = new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'});
+            }
+            const clockEl = document.createElement('div');
+            clockEl.id = 'statusClock';
+            clockEl.style.color = '#fff';
+            clockEl.style.fontWeight = 'bold';
+            document.querySelector('.top-bar-right').appendChild(clockEl);
+            updateClock();
+            setInterval(updateClock, 30000);
+
+            // App switcher
+            const appSwitcher = document.getElementById('appSwitcher');
+            const appMenu = document.getElementById('appMenu');
+            appSwitcher.onclick = (e) => {
+                e.stopPropagation();
+                appMenu.classList.toggle('show');
+                updateAppMenu();
+            };
+            document.onclick = () => appMenu.classList.remove('show');
+
+            function updateAppMenu() {
+                appMenu.innerHTML = '';
+                windowManager.forEach(win => {
+                    const item = document.createElement('div');
+                    item.className = 'app-item';
+                    item.textContent = win.element.querySelector('.window-title-gnome').textContent;
+                    item.onclick = () => {
+                        win.bringToFront();
+                        win.show();
+                        appMenu.classList.remove('show');
+                    };
+                    appMenu.appendChild(item);
+                });
+            }
+
+            // Dash click handlers
+            document.querySelectorAll('.dash-icon').forEach(icon => {
+                icon.onclick = () => {
+                    const windowId = icon.dataset.window;
+                    let win = windowManager.find(w => w.id === windowId);
+                    if (!win) {
+                        win = new GnomeWindow(windowId);
+                        windowManager.push(win);
+                        win.show();
+                        icon.classList.add('active');
+                    } else if (!win.element.style.display || win.element.style.display === 'none') {
+                        win.show();
+                        icon.classList.add('active');
+                    } else {
+                        win.close();
+                        icon.classList.remove('active');
+                    }
+                };
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>
