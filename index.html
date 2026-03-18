@@ -1491,26 +1491,38 @@
    
 
         function openOrToggleWindow(windowId) {
-            let win = windowManager.get(windowId);
+    let win = windowManager.get(windowId);
 
-            if (!win) {
-                win = new GnomeWindow(windowId);
-                windowManager.set(windowId, win);
-                win.show();
-                updateAppMenu();
-                return;
-            }
+    // นับจำนวนหน้าต่างที่เปิดอยู่
+    const openWindows = Array.from(windowManager.values()).filter(w => !w.hidden);
 
-            if (win.hidden) {
-                win.show();
-            } else if (activeWindowId === windowId) {
-                win.minimize();
-            } else {
-                win.show();
-            }
-
-            updateAppMenu();
+    if (!win) {
+        if (openWindows.length >= 3) {
+            showNotification('⚠️ You can only have 3 windows open at a time!');
+            return;
         }
+
+        win = new GnomeWindow(windowId);
+        windowManager.set(windowId, win);
+        win.show();
+        updateAppMenu();
+        return;
+    }
+
+    if (win.hidden) {
+        if (openWindows.length >= 3) {
+            showNotification('⚠️ You can only have 3 windows open at a time!');
+            return;
+        }
+        win.show();
+    } else if (activeWindowId === windowId) {
+        win.minimize();
+    } else {
+        win.show();
+    }
+
+    updateAppMenu();
+}
 
         function initAppSwitcher() {
             const appSwitcher = document.getElementById('appSwitcher');
