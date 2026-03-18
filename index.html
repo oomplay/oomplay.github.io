@@ -833,8 +833,11 @@
 
         const terminalState = {
             history: [],
-            historyIndex: -1
-        };      
+            historyIndex: -1,
+            sudoMode: false,
+            pingIntervals: new Map(),
+            htopInterval: null
+        };
 
         function escapeHtml(value = '') {
             return String(value)
@@ -1359,46 +1362,195 @@
     output.appendChild(document.createElement('br'));
 }
 
+        function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function appendTerminalLines(output, cmd, lines) {
+    const cmdLine = document.createElement('div');
+    cmdLine.style.lineHeight = '1.6';
+
+    const prompt = document.createElement('span');
+    prompt.style.cssText = 'color: #89b4fa; font-size: 14px;';
+    prompt.textContent = '[oom@linux ~]$ ';
+
+    const cmdText = document.createElement('span');
+    cmdText.style.cssText = 'color: #f5c2e7; font-size: 14px;';
+    cmdText.textContent = cmd;
+
+    cmdLine.append(prompt, cmdText);
+    output.appendChild(cmdLine);
+
+    for (const line of lines) {
+        const lineDiv = document.createElement('div');
+        lineDiv.style.cssText = 'line-height: 1.6; font-size: 14px; white-space: pre-wrap;';
+        lineDiv.textContent = line;
+        output.appendChild(lineDiv);
+        output.scrollTop = output.scrollHeight;
+
+        let delay = Math.random() * 120 + 40;
+
+        if (line.startsWith('Get:') || line.includes('Fetched')) {
+            delay = Math.random() * 400 + 200;
+        }
+
+        if (line.includes('Reading') || line.includes('Building') || line.includes('Calculating')) {
+            delay = Math.random() * 280 + 120;
+        }
+
+        await sleep(delay);
+    }
+
+    output.appendChild(document.createElement('br'));
+    output.scrollTop = output.scrollHeight;
+}
+
+function appendLiveLine(output, text, color = '#cdd6f4') {
+    const line = document.createElement('div');
+    line.style.cssText = `line-height: 1.6; font-size: 14px; white-space: pre-wrap; color: ${color};`;
+    line.textContent = text;
+    output.appendChild(line);
+    output.scrollTop = output.scrollHeight;
+    return line;
+}
+
+function stopHtop() {
+    if (terminalState.htopInterval) {
+        clearInterval(terminalState.htopInterval);
+        terminalState.htopInterval = null;
+    }
+}
+
+function stopAllPing() {
+    terminalState.pingIntervals.forEach(intervalId => clearInterval(intervalId));
+    terminalState.pingIntervals.clear();
+}
+
+function generateHtopFrame() {
+    const cpu = randomInt(18, 87);
+    const ram = randomInt(34, 76);
+    const swap = randomInt(1, 18);
+    const tasks = randomInt(184, 241);
+    const running = randomInt(2, 9);
+    const load1 = (Math.random() * 2.5 + 0.2).toFixed(2);
+    const load5 = (Math.random() * 2.2 + 0.2).toFixed(2);
+    const load15 = (Math.random() * 2.0 + 0.2).toFixed(2);
+
+    function bar(percent, size = 20) {
+        const filled = Math.round((percent / 100) * size);
+        return '█'.repeat(filled) + '░'.repeat(size - filled);
+    }
+
+    return `
+htop - oom@linux
+Tasks: ${tasks}, ${running} running
+Load average: ${load1} ${load5} ${load15}
+
+CPU  [${bar(cpu)}] ${cpu}%
+MEM  [${bar(ram)}] ${ram}%
+SWAP [${bar(swap)}] ${swap}%
+
+ PID   USER   CPU%   MEM%   COMMAND
+ 812   oom    18.2    4.1   gnome-shell
+ 991   oom    12.8    2.4   firefox
+1204   oom     6.4    1.8   gnome-terminal
+1428   oom    22.6    6.3   code
+1881   oom     3.2    0.9   pipewire
+`;
+}
+
+
 
         const terminalCommands = {
     help: () => ({
         type: 'text',
         value: `Available commands:
-  help     - Show this help
-  clear    - Clear terminal
-  echo     - Echo text
-  date     - Show current date/time
-  whoami   - Show current user
-  pwd      - Show current directory
-  ls       - List files
-  cat      - Read file
-  neofetch - Show system info
-  uname    - System information
-  uptime   - Show uptime
-  cowsay   - Cow says something
-  apt      - Simulate apt commands (update, upgrade)`
+  help      - Show this help
+  clear     - Clear terminal
+  echo      - Echo text
+  date      - Show current date/time
+  whoami    - Show current user
+  pwd       - Show current directory
+  ls        - List files
+  cat       - Read file
+  neofetch  - Show system info
+  uname     - System information
+  uptime    - Show uptime
+  cowsay    - Cow says something
+  apt       - Simulate apt commands
+  sudo      - Run command as superuser
+  history   - Show command history
+  ping      - Ping a host
+  htop      - Interactive process viewer
+  fortune   - Show random quote
+  exit      - Stop live commands`
     }),
-    clear: () => ({ type: 'clear' }),
+
+    clear: () => {
+        stopHtop();
+        stopAllPing();
+        return { type: 'clear' };
+    },
+
     echo: (args) => ({ type: 'text', value: args.join(' ') }),
     date: () => ({ type: 'text', value: new Date().toString() }),
     whoami: () => ({ type: 'text', value: 'oom' }),
     pwd: () => ({ type: 'text', value: '/home/oom' }),
-    ls: () => ({ type: 'text', value: 'Desktop  Documents  Downloads  Music  Pictures  Videos  .bashrc  .bash_profile  .config' }),
+
+    ls: () => ({
+        type: 'text',
+        value: 'Desktop  Documents  Downloads  Music  Pictures  Videos  .bashrc  .bash_profile  .config'
+    }),
+
     cat: (args) => {
         if (args[0] === '.bashrc') {
-            return { type: 'text', value: '# ~/.bashrc\nexport PATH=$PATH:~/bin\nalias ll="ls -la"\nalias cls="clear"' };
+            return {
+                type: 'text',
+                value: '# ~/.bashrc\nexport PATH=$PATH:~/bin\nalias ll="ls -la"\nalias cls="clear"'
+            };
         }
         if (args[0] === '.bash_profile') {
-            return { type: 'text', value: '# ~/.bash_profile\nif [ -f ~/.bashrc ]; then\n    source ~/.bashrc\nfi' };
+            return {
+                type: 'text',
+                value: '# ~/.bash_profile\nif [ -f ~/.bashrc ]; then\n    source ~/.bashrc\nfi'
+            };
         }
-        return { type: 'text', value: `cat: ${args[0] || 'no file specified'}: No such file or directory` };
+        return {
+            type: 'text',
+            value: `cat: ${args[0] || 'no file specified'}: No such file or directory`
+        };
     },
+
     neofetch: () => ({
         type: 'html',
-        value: `<div class="mono-block">... [เหมือนเดิม] ...</div>`
+        value: `
+<div class="mono-block">
+<span style="color: #89b4fa;">        .-/+oossssoo+/-.        </span><span style="color: #cdd6f4;">oom@linux</span>
+<span style="color: #89b4fa;">    \`:+ssssssssssssssssss+:\`    </span><span style="color: #cdd6f4;">-----------</span>
+<span style="color: #89b4fa;">  -+ssssssssssssssssssyyssss+-  </span><span style="color: #f9e2af;">OS:</span> Linux Mint 22 Vanessa x86_64
+<span style="color: #89b4fa;">.ossssssssssssssssss</span><span style="color: #f5c2e7;">dMMMNy</span><span style="color: #89b4fa;">sssso+. </span><span style="color: #f9e2af;">Host:</span> KVM
+<span style="color: #89b4fa;">/sssssssssss</span><span style="color: #f5c2e7;">hdmmNNmmyNMMMM</span><span style="color: #89b4fa;">hssss+  </span><span style="color: #f9e2af;">Kernel:</span> 6.8.0-57-generic
+<span style="color: #89b4fa;">+sssssssss</span><span style="color: #f5c2e7;">hm</span><span style="color: #89b4fa;">yd</span><span style="color: #f5c2e7;">NMMMNh</span><span style="color: #89b4fa;">ssssssssss+ </span><span style="color: #f9e2af;">Uptime:</span> 20 days, 14 hrs, 23 mins
+<span style="color: #89b4fa;">/ssssssss</span><span style="color: #f5c2e7;">hNMMM</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMNm</span><span style="color: #89b4fa;">yhssssssssssss/ </span><span style="color: #f9e2af;">Packages:</span> 2898 (dpkg)
+<span style="color: #89b4fa;">.ssssssss</span><span style="color: #f5c2e7;">hNMMMM</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMMdm</span><span style="color: #89b4fa;">Nhssssssssssss. </span><span style="color: #f9e2af;">Shell:</span> bash 5.2.21
+<span style="color: #89b4fa;">/ssssss</span><span style="color: #f5c2e7;">hNMMMMM</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMMmm</span><span style="color: #89b4fa;">hssssssssssssss/ </span><span style="color: #f9e2af;">Resolution:</span> 1920x1080
+<span style="color: #89b4fa;">ssssss</span><span style="color: #f5c2e7;">hNMMMMMMN</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMMmh</span><span style="color: #89b4fa;">ssssssssssssss. </span><span style="color: #f9e2af;">DE:</span> GNOME 45
+<span style="color: #89b4fa;">.sssss</span><span style="color: #f5c2e7;">hNMMMMMMMM</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMMmh</span><span style="color: #89b4fa;">sssssssssssssss. </span><span style="color: #f9e2af;">Theme:</span> Adwaita-dark [GTK3]
+<span style="color: #89b4fa;">/sssss</span><span style="color: #f5c2e7;">hNMMMMMMMMMd</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMmh</span><span style="color: #89b4fa;">ssssssssssssssss/ </span><span style="color: #f9e2af;">Icons:</span> Adwaita [GTK3]
+<span style="color: #89b4fa;">+ssss</span><span style="color: #f5c2e7;">hNMMMMMMMMMMmy</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">mmNh</span><span style="color: #89b4fa;">ssssssssssssssss+ </span><span style="color: #f9e2af;">Terminal:</span> gnome-terminal
+<span style="color: #89b4fa;">/ssss</span><span style="color: #f5c2e7;">hNMMMMMMMMMMMM</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">mmmy</span><span style="color: #89b4fa;">ssssssssssssssssss/ </span><span style="color: #f9e2af;">CPU:</span> AMD EPYC 9334 32-Core @ 3.7 GHz
+<span style="color: #89b4fa;">/sss</span><span style="color: #f5c2e7;">hNMMMMMMMMMMMMM</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMh</span><span style="color: #89b4fa;">sssssssssssssssssss+ </span><span style="color: #f9e2af;">GPU:</span> NVIDIA RTX A6000
+<span style="color: #89b4fa;">/s</span><span style="color: #f5c2e7;">hNMMMMMMMMMMMMM</span><span style="color: #89b4fa;">/</span><span style="color: #f5c2e7;">NMMmh</span><span style="color: #89b4fa;">sssssssssssssssssss. </span><span style="color: #f9e2af;">Memory:</span> 4946MiB / 262144MiB
+</div>`
     }),
+
     uname: () => ({ type: 'text', value: 'Linux linux 6.8.0-57-generic x86_64 GNU/Linux' }),
     uptime: () => ({ type: 'text', value: '20:14:23 up 20 days, 14:23, 1 user, load average: 0.42, 0.35, 0.28' }),
+
     cowsay: (args) => {
         const msg = args.join(' ') || 'Moo!';
         const line = '-'.repeat(msg.length + 2);
@@ -1415,63 +1567,148 @@
         };
     },
 
-    // เพิ่มคำสั่ง apt
-    apt: (args) => {
-    const subcmd = args[0];
+    history: () => ({
+        type: 'text',
+        value: terminalState.history.length
+            ? terminalState.history.map((cmd, i) => `${i + 1}  ${cmd}`).join('\n')
+            : 'No commands in history yet.'
+    }),
 
-    if (!subcmd) {
-        return { type: 'text', value: 'Usage: apt [update|upgrade]' };
-    }
-
-    if (subcmd === 'update') {
+    fortune: () => {
+        const fortunes = [
+            'Stay hungry, stay foolish.',
+            'The quieter you become, the more you are able to hear.',
+            'There is no place like 127.0.0.1',
+            'In a world without fences and walls, who needs Gates and Windows?',
+            'First, solve the problem. Then, write the code.',
+            'Beware of bugs in the above code; I have only proved it correct, not tried it.',
+            'Talk is cheap. Show me the code.'
+        ];
         return {
-            type: 'lines',
-            lines: [
-                'Hit:1 http://archive.ubuntu.com/ubuntu focal InRelease',
-                'Hit:2 http://archive.ubuntu.com/ubuntu focal-updates InRelease',
-                'Hit:3 http://archive.ubuntu.com/ubuntu focal-backports InRelease',
-                'Reading package lists... Done',
-                'Building dependency tree... Done',
-                'Reading state information... Done',
-                'All packages are up to date.'
-            ]
+            type: 'text',
+            value: fortunes[randomInt(0, fortunes.length - 1)]
+        };
+    },
+
+    exit: () => {
+    stopHtop();
+    stopAllPing();
+    return { type: 'exit', value: 'logout' };
+},
+
+    sudo: (args) => {
+        if (!args.length) {
+            return { type: 'text', value: 'usage: sudo <command>' };
+        }
+
+        const nestedCommand = args[0];
+        const nestedArgs = args.slice(1);
+
+        if (nestedCommand === 'apt') {
+            return terminalCommands.apt(nestedArgs, true);
+        }
+
+        return {
+            type: 'text',
+            value: `[sudo] password for oom: ********\n${nestedCommand}: command executed as root`
+        };
+    },
+
+    apt: (args, isSudo = false) => {
+        const subcmd = args[0];
+
+        if (!subcmd) {
+            return { type: 'text', value: 'Usage: apt [update|upgrade]' };
+        }
+
+        if (subcmd === 'update') {
+            return {
+                type: 'lines',
+                lines: [
+                    ...(isSudo ? ['[sudo] password for oom: ********'] : []),
+                    'Hit:1 http://archive.ubuntu.com/ubuntu jammy InRelease',
+                    'Hit:2 http://archive.ubuntu.com/ubuntu jammy-updates InRelease',
+                    'Hit:3 http://archive.ubuntu.com/ubuntu jammy-backports InRelease',
+                    'Hit:4 http://security.ubuntu.com/ubuntu jammy-security InRelease',
+                    'Reading package lists... Done',
+                    'Building dependency tree... Done',
+                    'Reading state information... Done',
+                    'All packages are up to date.'
+                ]
+            };
+        }
+
+        if (subcmd === 'upgrade') {
+            return {
+                type: 'lines',
+                lines: [
+                    ...(isSudo ? ['[sudo] password for oom: ********'] : []),
+                    'Reading package lists... Done',
+                    'Building dependency tree... Done',
+                    'Reading state information... Done',
+                    'Calculating upgrade... Done',
+                    'The following packages will be upgraded:',
+                    '  gnome-shell mutter nautilus pipewire firefox',
+                    '5 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.',
+                    'Need to get 82.4 MB of archives.',
+                    'After this operation, 14.8 MB of additional disk space will be used.',
+                    'Do you want to continue? [Y/n] y',
+                    'Get:1 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 gnome-shell 45.2 [8,420 kB]',
+                    'Get:2 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 mutter 45.2 [10.1 MB]',
+                    'Get:3 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 nautilus 45.1 [6,280 kB]',
+                    'Get:4 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 pipewire 1.0.5 [4,118 kB]',
+                    'Get:5 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 firefox 124.0 [53.5 MB]',
+                    'Fetched 82.4 MB in 4s (20.6 MB/s)',
+                    '(Reading database ... 312345 files and directories currently installed.)',
+                    'Preparing to unpack ...',
+                    'Unpacking gnome-shell...',
+                    'Unpacking mutter...',
+                    'Unpacking nautilus...',
+                    'Unpacking pipewire...',
+                    'Unpacking firefox...',
+                    'Setting up gnome-shell...',
+                    'Setting up mutter...',
+                    'Setting up nautilus...',
+                    'Setting up pipewire...',
+                    'Setting up firefox...',
+                    'Processing triggers for man-db...',
+                    'Processing triggers for desktop-file-utils...',
+                    'Processing triggers for initramfs-tools...',
+                    'Upgrade complete! 🎉'
+                ]
+            };
+        }
+
+        return { type: 'text', value: `apt: unknown subcommand: ${subcmd}` };
+    },
+
+    ping: (args) => {
+        const host = args[0] || 'google.com';
+        return {
+            type: 'ping',
+            host
+        };
+    },
+
+    htop: () => ({
+        type: 'htop'
+    }),
+
+    rm: (args) => {
+        if (args.join(' ') === '-rf /' || args.join(' ') === '-rf /*') {
+            return {
+                type: 'text',
+                value: `rm: it is dangerous to operate recursively on '/'\nNice try 😏`
+            };
+        }
+
+        return {
+            type: 'text',
+            value: `rm: cannot remove '${args.join(' ') || ''}': Permission denied`
         };
     }
-
-    if (subcmd === 'upgrade') {
-        return {
-            type: 'lines',
-            lines: [
-                'Reading package lists... Done',
-                'Building dependency tree... Done',
-                'Reading state information... Done',
-                'Calculating upgrade... Done',
-                'The following packages will be upgraded:',
-                '  gnome-shell mutter nautilus',
-                '3 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.',
-                'Need to get 24.8 MB of archives.',
-                'After this operation, 1,024 kB disk space will be freed.',
-                'Do you want to continue? [Y/n] y',
-                'Get:1 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 gnome-shell 45.2 [8,420 kB]',
-                'Get:2 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 mutter 45.2 [10.1 MB]',
-                'Get:3 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 nautilus 45.1 [6,280 kB]',
-                'Fetched 24.8 MB in 2s (12.4 MB/s)',
-                'Unpacking gnome-shell...',
-                'Unpacking mutter...',
-                'Unpacking nautilus...',
-                'Setting up gnome-shell...',
-                'Setting up mutter...',
-                'Setting up nautilus...',
-                'Processing triggers for man-db...',
-                'Upgrade complete! (What!!)'
-            ]
-        };
-    }
-
-    return { type: 'text', value: `apt: unknown subcommand: ${subcmd}` };
-}
-
 };
+
 
 
         function appendTerminalEntry(output, cmd, result) {
@@ -1505,7 +1742,7 @@
     output.scrollTop = output.scrollHeight;
 }
 
-        function initTerminal() {
+       function initTerminal() {
     const output = document.getElementById('terminal-output');
     const input = document.getElementById('terminal-input');
     if (!output || !input) return;
@@ -1518,6 +1755,8 @@
     if (!input.dataset.bound) {
         input.addEventListener('keydown', async (event) => {
             if (event.key === 'Enter') {
+                stopHtop();
+
                 const cmd = input.value.trim();
                 if (!cmd) return;
 
@@ -1541,10 +1780,53 @@
                 input.value = '';
 
                 if (result.type === 'clear') {
-                    output.innerHTML = '';
-                    output.dataset.booted = 'true';
-                } else if (result.type === 'lines') {
-                    await appendTerminalLines(output, cmd, result.lines, 120);
+    output.innerHTML = '';
+    output.dataset.booted = 'true';
+} else if (result.type === 'exit') {
+    appendTerminalEntry(output, cmd, {
+        type: 'text',
+        value: 'logout'
+    });
+
+    const terminalWindow = windowManager.get('terminal');
+    if (terminalWindow) {
+        setTimeout(() => {
+            terminalWindow.close();
+        }, 250);
+    }
+} else if (result.type === 'lines') {
+    await appendTerminalLines(output, cmd, result.lines);
+} else if (result.type === 'ping') {
+
+                    appendTerminalEntry(output, cmd, {
+                        type: 'text',
+                        value: `PING ${result.host} (${result.host}) 56(84) bytes of data.`
+                    });
+
+                    let seq = 1;
+                    const intervalId = setInterval(() => {
+                        const time = (Math.random() * 40 + 12).toFixed(1);
+                        appendLiveLine(
+                            output,
+                            `64 bytes from ${result.host}: icmp_seq=${seq++} ttl=117 time=${time} ms`
+                        );
+                    }, randomInt(700, 1200));
+
+                    terminalState.pingIntervals.set(result.host + Date.now(), intervalId);
+                } else if (result.type === 'htop') {
+                    appendTerminalEntry(output, cmd, {
+                        type: 'text',
+                        value: 'logout\nConnection to localhost closed.'
+                    });
+
+                    const frame = appendLiveLine(output, generateHtopFrame(), '#a6e3a1');
+                    frame.style.fontFamily = 'var(--font-mono)';
+                    frame.style.whiteSpace = 'pre-wrap';
+
+                    terminalState.htopInterval = setInterval(() => {
+                        frame.textContent = generateHtopFrame();
+                        output.scrollTop = output.scrollHeight;
+                    }, 900);
                 } else {
                     appendTerminalEntry(output, cmd, result);
                 }
@@ -1572,7 +1854,8 @@
     }
 
     input.focus();
-}                   
+}
+
         async function appendTerminalLines(output, cmd, lines, delay = 150) {
             const cmdLine = document.createElement('div');
             cmdLine.style.lineHeight = '1.6';
