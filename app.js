@@ -1,20 +1,3 @@
-        const DEFAULT_USER_DATA = {
-            name: 'Unknown',
-            pronouns: 'Unknown',
-            birthday: 'Unknown',
-            likes: ['Unknown'],
-            dislike: 'Unknown',
-            languages: {
-                thai: 'Unknown',
-                english: 'Unknown',
-                note: 'Unknown'
-            },
-            games: 'Unknown',
-            animals: 'Unknown',
-            greeting: 'Unknown'
-        };
-
-        let userData = null;
         let windowsData = {};
         let topZIndex = 1001;
         let activeWindowId = null;
@@ -27,15 +10,6 @@
             pingIntervals: new Map(),
             htopInterval: null
         };
-
-        function escapeHtml(value = '') {
-            return String(value)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
 
         function createElement(tag, className, text) {
             const el = document.createElement(tag);
@@ -85,50 +59,6 @@
             setTimeout(() => ripple.remove(), 600);
         }
 
-        // Accept a string or an array for list-shaped fields (games/animals)
-        // and return a clean array of trimmed, non-empty items.
-        function normalizeList(value) {
-            if (Array.isArray(value)) {
-                return value.map(item => String(item ?? '').trim()).filter(Boolean);
-            }
-            const text = String(value ?? '').trim();
-            return text ? [text] : [];
-        }
-
-        function sanitizeUserData(data) {
-            return {
-                name: String(data?.name ?? '').trim() || DEFAULT_USER_DATA.name,
-                pronouns: String(data?.pronouns ?? '').trim() || DEFAULT_USER_DATA.pronouns,
-                birthday: String(data?.birthday ?? '').trim() || DEFAULT_USER_DATA.birthday,
-                likes: Array.isArray(data?.likes) && data.likes.length
-                    ? data.likes.map(item => String(item ?? '').trim()).filter(Boolean)
-                    : DEFAULT_USER_DATA.likes,
-                dislike: String(data?.dislike ?? '').trim() || DEFAULT_USER_DATA.dislike,
-                languages: {
-                    thai: String(data?.languages?.thai ?? '').trim() || DEFAULT_USER_DATA.languages.thai,
-                    english: String(data?.languages?.english ?? '').trim() || DEFAULT_USER_DATA.languages.english,
-                    note: String(data?.languages?.note ?? '').trim() || DEFAULT_USER_DATA.languages.note
-                },
-                games: normalizeList(data?.games),
-                animals: normalizeList(data?.animals),
-                greeting: String(data?.greeting ?? '').trim() || DEFAULT_USER_DATA.greeting
-            };
-        }
-
-        async function loadUserData() {
-            try {
-                const response = await fetch('data.json', { cache: 'no-store' });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const json = await response.json();
-                userData = sanitizeUserData(json);
-            } catch (error) {
-                console.warn('Failed to load data.json, using defaults:', error);
-                userData = DEFAULT_USER_DATA;
-                showNotification('⚠️ Using default data (data.json not found)');
-            }
-            buildWindowsData();
-        }
-
         function renderTerminalMarkup() {
             return `
                 <div class="terminal-shell" id="terminal-container">
@@ -147,164 +77,24 @@
         }
 
         function buildWindowsData() {
-    const data = sanitizeUserData(userData || DEFAULT_USER_DATA);
-    const firstName = data.name.split(' ')[0];
+            windowsData = {
+                terminal: {
+                    title: 'Terminal',
+                    render(container) {
+                        const wrap = createElement('div');
+                        wrap.style.cssText = `
+                            height: 100%;
+                            display: flex;
+                            flex-direction: column;
+                            min-width: 0;
+                        `;
 
-    windowsData = {
-        profile: {
-            title: `About ${firstName}`,
-            render(container) {
-                const hero = createElement('div', 'hero-content');
-                const name = createElement('div', 'hero-name', data.name);
-
-                const pronouns = createElement('div', 'hero-subtitle');
-                pronouns.textContent = `🍜 ${data.pronouns}`;
-
-                const greeting = createElement('div', 'greeting', `🎋 ${data.greeting}`);
-
-                hero.append(name, pronouns, greeting);
-                container.appendChild(hero);
-            }
-        },
-        firefox: {
-    title: 'Firefox 🦊',
-    render(container) {
-        const wrap = createElement('div');
-        wrap.style.cssText = `
-            padding: 24px;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        `;
-
-        const title = createElement('h2');
-        title.style.cssText = 'color: #e66000; font-size: 2rem; margin: 0;';
-        title.textContent = '🦊 Firefox';
-
-        const iframe = document.createElement('iframe');
-        iframe.title = 'Never Gonna Give You Up';
-        iframe.src = 'https://archive.org/embed/Rick_Astley_Never_Gonna_Give_You_Up';
-        iframe.style.width = '100%';
-        iframe.style.height = '100%';
-        iframe.style.minHeight = '320px';
-        iframe.style.border = '0';
-        iframe.style.borderRadius = '12px';
-        iframe.frameBorder = '0';
-        iframe.allowFullscreen = true;
-        iframe.loading = 'lazy';
-        iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-
-        const iframeWrap = createElement('div');
-        iframeWrap.style.cssText = 'flex: 1; min-height: 320px; min-width: 0;';
-        iframeWrap.appendChild(iframe);
-        const desc = createElement('p', 'window-body-text');
-        desc.textContent = '🎵~~~>';
-        desc.style.margin = '0';
-
-        wrap.append(title, iframeWrap, desc);
-        container.appendChild(wrap);
-    }
-},
-        terminal: {
-    title: 'Terminal',
-    render(container) {
-        const wrap = createElement('div');
-        wrap.style.cssText = `
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-        `;
-
-        wrap.innerHTML = renderTerminalMarkup();
-        container.appendChild(wrap);
-    }
-},
-
-        birthday: {
-            title: '🕊️ Birthday',
-            render(container) {
-                const p = createElement('p', 'window-body-text');
-                p.textContent = data.birthday;
-                container.appendChild(p);
-            }
-        },
-        likes: {
-            title: '🐇 Likes',
-            render(container) {
-                const ul = createElement('ul', 'info-list');
-                data.likes.forEach(item => {
-                    const li = createElement('li', '', `📚 ${item}`);
-                    ul.appendChild(li);
-                });
-                container.appendChild(ul);
-            }
-        },
-        dislikes: {
-            title: '🥐 Dislike',
-            render(container) {
-                const p = createElement('p', 'window-body-text');
-                p.textContent = data.dislike;
-                container.appendChild(p);
-            }
-        },
-        languages: {
-            title: '🧁 Languages',
-            render(container) {
-                const ul = createElement('ul', 'info-list');
-
-                const liThai = createElement('li');
-                liThai.innerHTML = `<span style="font-size: 1.15em; margin-right: 12px;">🇹🇭 Thai</span><strong>${escapeHtml(data.languages.thai)}</strong>`;
-
-                const liEnglish = createElement('li');
-                liEnglish.innerHTML = `<span style="font-size: 1.15em; margin-right: 12px;">🇺🇸 English</span><strong>${escapeHtml(data.languages.english)}</strong>`;
-
-                const liNote = createElement('li');
-                liNote.style.textAlign = 'center';
-                liNote.textContent = `😌 ${data.languages.note}`;
-
-                ul.append(liThai, liEnglish, liNote);
-                container.appendChild(ul);
-            }
-        },
-        games: {
-            title: '🍡 Games',
-            render(container) {
-                const ul = createElement('ul', 'info-list');
-                if (data.games.length === 0) {
-                    const li = createElement('li');
-                    li.textContent = 'No games yet 🕹️';
-                    ul.appendChild(li);
-                } else {
-                    data.games.forEach(item => {
-                        const li = createElement('li', '', `🎮 ${item}`);
-                        ul.appendChild(li);
-                    });
+                        wrap.innerHTML = renderTerminalMarkup();
+                        container.appendChild(wrap);
+                    }
                 }
-                container.appendChild(ul);
-            }
-        },
-
-        animals: {
-            title: '☕️ Favorite animals',
-            render(container) {
-                const ul = createElement('ul', 'info-list');
-                if (data.animals.length === 0) {
-                    const li = createElement('li');
-                    li.textContent = 'No animals yet 🐾';
-                    ul.appendChild(li);
-                } else {
-                    data.animals.forEach(item => {
-                        const li = createElement('li', '', `🐾 ${item}`);
-                        ul.appendChild(li);
-                    });
-                }
-                container.appendChild(ul);
-            }
+            };
         }
-    };
-}
 
 
         function setDockState(windowId, { running, active }) {
@@ -1184,18 +974,24 @@ SWAP [${bar(swap)}] ${swap}%
             });
         }
 
-        async function init() {
+        function init() {
             createParticles();
-            await loadUserData();
+            buildWindowsData();
             initDash();
             initAppSwitcher();
             initWindowDragging();
             scheduleClock();
 
-            document.getElementById('activities').addEventListener('click', () => {
+            // The terminal is the only app — open it right away.
+            openOrToggleWindow('terminal');
+
+            document.getElementById('activities').addEventListener('click', (event) => {
+                // Don't let the document-level "outside click" handler
+                // immediately undo this intentional toggle.
+                event.stopPropagation();
                 const anyVisible = Array.from(windowManager.values()).some(win => !win.hidden);
                 if (!anyVisible) {
-                    openOrToggleWindow('profile');
+                    openOrToggleWindow('terminal');
                 } else {
                     updateAppMenu();
                     document.getElementById('appMenu').classList.toggle('show');
