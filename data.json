@@ -13,15 +13,15 @@
   "languages": {
     "thai": "Native proficiency",
     "english": "Intermediate proficiency",
-    "note": "Btw Dont mind this"
+    "note": "Btw, don't mind this"
   },
   "games": [
-    "Minecraft ",
-    " PUBG"
+    "Minecraft",
+    "PUBG"
   ],
   "animals": [
-    "Fox ",
-    " Other cute animals"
+    "Fox",
+    "Other cute animals"
   ],
   "greeting": "Nice to meet you."
 }
